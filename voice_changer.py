@@ -1,11 +1,22 @@
 import argparse
 import os
-from moviepy.editor import VideoFileClip, AudioFileClip  # 修改导入语句
+from moviepy.editor import VideoFileClip, AudioFileClip
 import librosa
 import soundfile as sf
 import numpy as np
 from scipy.io import wavfile
 import tempfile
+from scipy.signal import wiener
+
+def remove_noise(audio_data, sr):
+    """
+    去除音频中的白噪声
+    :param audio_data: 音频数据
+    :param sr: 采样率
+    :return: 处理后的音频数据
+    """
+    # 使用Wiener滤波器去除噪声
+    return wiener(audio_data)
 
 def change_pitch(audio_data, sr, pitch_factor):
     """
@@ -40,7 +51,13 @@ def process_video(input_path, output_path, pitch_factor):
         # 处理音频
         print("处理音频...")
         audio_data, sr = librosa.load(temp_audio, sr=None)
-        modified_audio = change_pitch(audio_data, sr, pitch_factor)
+        
+        # 去除噪声
+        print("去除噪声...")
+        cleaned_audio = remove_noise(audio_data, sr)
+        
+        # 改变音调
+        modified_audio = change_pitch(cleaned_audio, sr, pitch_factor)
         
         # 保存修改后的音频
         temp_modified_audio = os.path.join(temp_dir, "temp_modified_audio.wav")
@@ -48,11 +65,11 @@ def process_video(input_path, output_path, pitch_factor):
         
         # 合并音频和视频
         print("合成视频...")
-        video = video.set_audio(AudioFileClip(temp_modified_audio))  # 修改这里
+        video = video.set_audio(AudioFileClip(temp_modified_audio))
         
         # 保存结果（显式指定fps）
         print("保存视频...")
-        video.write_videofile(output_path, fps=video.fps)  # 添加fps参数
+        video.write_videofile(output_path, fps=video.fps)
         
         print(f"处理完成！输出文件保存在: {output_path}")
         
